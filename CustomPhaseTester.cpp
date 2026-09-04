@@ -8,48 +8,46 @@ int getch(void) {
   int ch;
   struct termios oldt;
   struct termios newt;
-  tcgetattr(STDIN_FILENO, &oldt); // guarda as configurações antigas
-  newt = oldt; // copia as configurações antigas para as novas
-  newt.c_lflag &= ~(ICANON | ECHO); // faz uma mudança nas novas configurações
-  tcsetattr(STDIN_FILENO, TCSANOW, &newt); // aplica as novas configurações
-  ch = getchar();                          // pega a tecla
-  tcsetattr(STDIN_FILENO, TCSANOW, &oldt); // restaura as configurações antigas
-  return ch;                               // retorna o caractere lido
+  tcgetattr(STDIN_FILENO, &oldt);
+  newt = oldt;
+  newt.c_lflag &= ~(ICANON | ECHO);
+  tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+  ch = getchar();
+  tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+  return ch;
 }
 
 void SetCursorPos(int XPos, int YPos) {
   printf("\033[%d;%dH", YPos + 1, XPos + 1);
 }
 
-// Fase1 recebe a matriz por referência e a preenche.
 void Fase1(int (&mat)[20][20]) {
-  int temp[20][20]{{1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
-                    {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
-                    {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
-                    {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
-                    {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
-                    {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
-                    {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
-                    {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
-                    {1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1},
-                    {1,1,1,1,1,0,1,1,1,1,1,0,0,2,3,9,1,1,1,1},
-                    {1,1,1,2,0,0,8,5,1,1,3,1,2,1,1,1,1,1,1,1},
-                    {1,1,1,1,0,1,1,1,1,1,4,1,4,1,1,1,1,1,1,1},
-                    {1,1,1,1,0,0,3,2,8,0,0,2,0,0,1,1,1,1,1,1},
-                    {1,1,1,1,1,1,1,1,1,1,2,1,3,1,1,1,1,1,1,1},
-                    {1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1},
-                    {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
-                    {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
-                    {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
-                    {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
-                    {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1}};
+  int temp[20][20]{{13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13},
+                  {13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13},
+                  {13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13},
+                  {13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13},
+                  {13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13},
+                  {13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13},
+                  {13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13},
+                  {13,13,13,13,13,13,13, 1, 1, 1, 1, 1, 1, 1,13,13,13,13,13,13},
+                  {13,13,13,13,13,13,13, 1, 0, 0, 0, 0, 0, 1,13,13,13,13,13,13},
+                  {13,13,13,13,13,13,13, 1, 0, 0, 0, 0, 0, 1,13,13,13,13,13,13},
+                  {13,13,13,13,13,13,13, 1, 0, 0, 9, 0, 0, 1,13,13,13,13,13,13},
+                  {13,13,13,13,13,13,13, 1, 0, 0, 0, 0, 0, 1,13,13,13,13,13,13},
+                  {13,13,13,13,13,13,13, 1, 0, 0, 5, 0, 0, 1,13,13,13,13,13,13},
+                  {13,13,13,13,13,13,13, 1, 1, 1, 1, 1, 1, 1,13,13,13,13,13,13},
+                  {13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13},
+                  {13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13},
+                  {13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13},
+                  {13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13},
+                  {13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13},
+                  {13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13}};
   for (int i = 0; i < 20; i++)
     for (int j = 0; j < 20; j++)
       mat[i][j] = temp[i][j];
 }
 
 void GirarMatrizE(int (&mat)[20][20]) {
-  // transpõe
   for (int i = 0; i < 20; i++) {
     for (int j = i + 1; j < 20; j++) {
       int temp = mat[i][j];
@@ -57,7 +55,6 @@ void GirarMatrizE(int (&mat)[20][20]) {
       mat[j][i] = temp;
     }
   }
-  // inverte cada linha
   for (int i = 0; i < 20; i++) {
     for (int j = 0; j < 10; j++) {
       int temp = mat[i][j];
@@ -84,7 +81,6 @@ void GirarMatrizQ(int (&mat)[20][20]) {
     }
 }
 
-// Helper: diz se um valor de célula é "passável" (chão, escada, saída etc.)
 bool ehPassavel(int valor) {
     return valor == 6 || valor == 0 || valor == 3 || valor == 5 || valor == 8;
 }
@@ -92,11 +88,9 @@ bool ehPassavel(int valor) {
 int main() {
   printf("\033[?25l");
 
-  // matriz do jogo, preenchida pela Fase1()
   int m[20][20];
   Fase1(m);
 
-  // ponteiro para a matriz ativa no momento (sempre m)
   int (*atual)[20] = m;
 
   int px = 0, py = 0, rerun = 0, rerun1 = 0;
@@ -135,9 +129,6 @@ int main() {
     char x;
     x = getch();
     switch (x) {
-    // --- FIX: checagem de limites adicionada em w/a/s/d para evitar
-    // acesso fora da matriz (px-1, px+1, py-1, py+1 nunca são validados
-    // antes de indexar atual[][]).
     case 'w':
       if (px - 1 >= 0 && ehPassavel(atual[px-1][py])) {
           rerun = atual[px-1][py];
