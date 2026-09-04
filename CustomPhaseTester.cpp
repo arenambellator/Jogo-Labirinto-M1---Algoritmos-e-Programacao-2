@@ -106,7 +106,6 @@ int main() {
   int F = 1;
   bool giro = true;
   while (F == 1) {
-    printf("\033[37m"); cout << "Rode o mapa clicando no '/'\n";
     for (int i = 0; i < 20; i++) {
       for (int j = 0; j < 20; j++) {
         switch (m[i][j]) {
@@ -125,7 +124,6 @@ int main() {
       }
       cout << endl;
     }
-    printf("\033[37m"); cout << "Quando chegar no S você ganha! Boa sorte!\n";
     char x;
     x = getch();
     switch (x) {
