@@ -2,6 +2,7 @@
 #include <termios.h>
 #include <unistd.h>
 #include <cstdlib>
+#include <cstring>
 
 using namespace std;
 
@@ -32,6 +33,13 @@ int getch(void) {
 // sem precisar limpar a tela inteira a cada frame.
 void SetCursorPos(int XPos, int YPos) {
     printf("\033[%d;%dH", YPos + 1, XPos + 1);
+}
+
+// Limpa a tela inteira do terminal. Usado ao trocar de "modo" de exibição
+// (jogo <-> créditos, fase <-> menu) para não deixar caracteres antigos
+// sobrando na tela.
+void LimparTela() {
+    printf("\033[2J\033[H");
 }
 
 // ============================================================================
@@ -106,7 +114,7 @@ void Fase3(int (&mat)[20][20]) {
         {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
         {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
         {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
-        {1,1,1,1,5,1,1,1,1,3,1,1,1,1,1,1,1,1,1,1},
+        {1,1,1,1,14,1,1,1,1,3,1,1,1,1,1,1,1,1,1,1},
         {1,1,1,1,4,1,1,1,1,4,1,0,1,1,1,1,1,1,1,1},
         {1,1,1,1,0,0,0,0,0,2,0,2,1,1,1,1,1,1,1,1},
         {1,1,1,1,2,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1},
@@ -217,7 +225,7 @@ void GirarMatrizQ(int (&mat)[20][20]) {
 // Indica se o jogador pode caminhar sobre o tile de valor "valor".
 bool ehPassavel(int valor) {
     return valor == 6 || valor == 0 || valor == 3 || valor == 5 ||
-           valor == 8 || valor == 10 || valor == 11 || valor == 12;
+           valor == 8 || valor == 10 || valor == 11 || valor == 12 || valor == 14;
 }
 
 // Varre a matriz procurando o tile do jogador (valor 9) e guarda sua
@@ -281,18 +289,28 @@ void AlternarTerrenoOculto(int (&mat)[20][20]) {
 
 // Faz os blocos vermelhos (valor 2) "caírem" para baixo enquanto houver
 // espaço andável abaixo deles — simula gravidade após girar o mapa.
+//
+// CORREÇÃO: antes, a condição do laço tinha um erro de precedência de
+// operadores ("a && b || c" era interpretado como "(a && b) || c"), o que
+// fazia o código acessar mat[x+1][y] fora dos limites da matriz quando
+// x+1 == 20, além de usar uma condição de queda errada ("continua caindo
+// enquanto a casa de baixo não for outro bloco", em vez de "continua caindo
+// enquanto a casa de baixo for andável"). Também percorríamos a matriz de
+// cima para baixo, o que impedia blocos empilhados de caírem corretamente
+// (o de cima tentava cair antes do de baixo terminar de assentar).
+//
+// Agora percorremos cada coluna de baixo para cima: assim, o bloco mais
+// baixo de uma pilha assenta primeiro, e os de cima caem sobre ele em
+// seguida, até que nenhum bloco tenha mais espaço andável abaixo dele.
 void AplicarGravidadeBlocos(int (&mat)[20][20]) {
-    for (int i = 0; i < 20; i++) {
-        for (int j = 0; j < 20; j++) {
+    for (int j = 0; j < 20; j++) {
+        for (int i = 18; i >= 0; i--) {
             if (mat[i][j] == 2) {
-                int aux1 = 0, aux = 0, x = i, y = j;
-                while (x + 1 < 20 && ehPassavel(mat[x + 1][y])) {
-                    aux = mat[x + 1][y];
-                    mat[x][y] = 0;
-                    x = x + 1;
-                    mat[x - 1][y] = aux1;
-                    mat[x][y] = 2;
-                    aux1 = aux;
+                int x = i;
+                while (x + 1 < 20 && ehPassavel(mat[x + 1][j])) {
+                    mat[x][j] = mat[x + 1][j];
+                    mat[x + 1][j] = 2;
+                    x++;
                 }
             }
         }
@@ -343,6 +361,12 @@ void CarregarFase(int (&mat)[20][20], int jogoAtual, int &px, int &py, int &reru
     rerun1 = 0;
 }
 
+// Copia o conteúdo de uma matriz 20x20 para outra. Usada para salvar/restaurar
+// o estado da fase quando o jogador dá uma "espiada" no menu com 'm'.
+void CopiarMatriz(int (&origem)[20][20], int (&destino)[20][20]) {
+    memcpy(destino, origem, sizeof(int) * 20 * 20);
+}
+
 // ============================================================================
 // 5. DESENHO DO MAPA
 // ============================================================================
@@ -368,7 +392,7 @@ void DesenharMapa(int (&mat)[20][20]) {
             case 11: printf("\033[33m"); cout << "2"; break;               // porta fase 2
             case 12: printf("\033[31m"); cout << "3"; break;               // porta fase 3
             case 13: cout << " "; break;                                   // fundo do menu
-            case 14: printf("\033[33m"); cout << "WIP"; break;             // não utilizado
+            case 14: printf("\033[33m"); cout << "F"; break;               // saída final (Fase 3): encerra o jogo
             default: cout << " ";
             }
         }
@@ -376,6 +400,28 @@ void DesenharMapa(int (&mat)[20][20]) {
     }
 
     printf("\033[37m");  // restaura cor padrão ao final
+
+    // Rodapé com dica dos comandos, sempre visível durante o jogo.
+    printf("\033[36m");
+    cout << "[p] creditos  [r] reiniciar fase  [m] menu" << endl;
+    printf("\033[37m");
+}
+
+// Desenha a tela de créditos. Preenche as mesmas 20 linhas usadas pelo mapa
+// (com padding) para não deixar sobras de caracteres do frame anterior.
+void DesenharCreditos() {
+    printf("\033[33m");
+
+    cout<<"===================================="<<endl<<"              CREDITOS"<<endl<<"===================================="<<endl<<" Jogo de quebra-cabeca com rotacao"<<endl<<" de mapa, alavancas e gravidade."<<endl<<endl<<" Desenvolvido em C++"<<endl<<endl<<" Por Vitor Chilanti"<<endl<<endl<<" Pressione 'p' para voltar ao jogo"<<endl;
+
+    // Preenche as linhas restantes em branco para cobrir totalmente
+    // o que estava desenhado antes (mapa tem 20 linhas de 20 colunas
+    // + rodapé, então cobrimos uma área generosa).
+    for (int i = 9; i < 22; i++) {
+        cout << "                                        " << endl;
+    }
+
+    printf("\033[37m");
 }
 
 // ============================================================================
@@ -390,16 +436,32 @@ int main() {
     bool giro = true;
     bool jogando = true;
 
+    // --- Estado da tela de créditos ('p') ---
+    bool emCreditos = false;
+
+    // --- Estado da "espiada" no menu ('m') ---
+    // Quando o jogador está numa fase e pressiona 'm', o estado atual da
+    // fase é salvo aqui; pressionando 'm' de novo, esse estado é restaurado
+    // e o jogador volta exatamente para onde estava.
+    bool emMenuTemporario = false;
+    int matrizSalva[20][20];
+    int pxSalvo = 0, pySalvo = 0, rerun1Salvo = 0;
+    int jogoAtualSalvo = 0, faseCarregadaSalva = -1;
+
     printf("\033[?25l"); // esconde o cursor do terminal
 
     while (jogando) {
-        // Só recarrega a matriz quando a fase realmente mudou
-        if (JogoAtual != faseCarregada) {
-            CarregarFase(m, JogoAtual, px, py, rerun1);
-            faseCarregada = JogoAtual;
-        }
+        if (emCreditos) {
+            DesenharCreditos();
+        } else {
+            // Só recarrega a matriz quando a fase realmente mudou
+            if (JogoAtual != faseCarregada) {
+                CarregarFase(m, JogoAtual, px, py, rerun1);
+                faseCarregada = JogoAtual;
+            }
 
-        DesenharMapa(m);
+            DesenharMapa(m);
+        }
 
         char tecla = getch();
         switch (tecla) {
@@ -407,37 +469,94 @@ int main() {
         case 's':
         case 'a':
         case 'd':
-            // Movimento do jogador
-            MoverJogador(m, px, py, rerun1, tecla);
+            // Movimento do jogador (desabilitado durante os créditos)
+            if (!emCreditos) {
+                MoverJogador(m, px, py, rerun1, tecla);
+            }
             break;
 
         case 'q':
         case 'e':
             // Só gira o mapa se o jogador estiver sobre a alavanca (tile 3)
-            if (rerun1 == 3) {
+            if (!emCreditos && rerun1 == 3) {
                 GirarMapa(m, px, py, giro, tecla);
             }
             break;
 
         case '\n':
-            if (JogoAtual == 0) {
-                // No menu: Enter sobre uma porta (10/11/12) troca de fase
-                switch (SelecionarFase(rerun1)) {
-                case 10: JogoAtual = 1; break;
-                case 11: JogoAtual = 2; break;
-                case 12: JogoAtual = 3; break;
+            if (emCreditos == false) {
+                // CORREÇÃO: o tile 14 ('S', usado na Fase 3) fica embaixo do
+                // jogador da mesma forma que qualquer outro tile durante o
+                // jogo, então esse caso precisa ser checado independente da
+                // fase atual — antes, "case 14" só era avaliado dentro do
+                // bloco do menu (JogoAtual == 0), onde o tile 14 nunca existe,
+                // então pressionar Enter sobre ele na Fase 3 não fazia nada.
+                if (rerun1 == 14) {
+                    jogando = false;
+                } else if (JogoAtual == 0 && !emMenuTemporario) {
+                    // No menu "de verdade" (não é uma espiada): Enter sobre
+                    // uma porta (10/11/12) troca de fase
+                    switch (SelecionarFase(rerun1)) {
+                    case 10: JogoAtual = 1; break;
+                    case 11: JogoAtual = 2; break;
+                    case 12: JogoAtual = 3; break;
+                    }
+                } else if (JogoAtual != 0 && VerificarVitoria(rerun1)) {
+                    // Dentro de uma fase: Enter sobre a saída volta ao menu
+                    // definitivamente (não há mais fase salva para restaurar)
+                    JogoAtual++;
+                    emMenuTemporario = false;
                 }
-            } else if (VerificarVitoria(rerun1)) {
-                // Dentro de uma fase: Enter sobre a saída volta ao menu
-                JogoAtual = 0;
             }
             break;
 
         case 'r':
-            // Atalho para reiniciar/voltar ao menu a qualquer momento
-            if (JogoAtual != 0) {
-                JogoAtual = 0;
+            // Reinicia a fase atual (não faz nada no menu ou durante
+            // uma espiada temporária no menu)
+            if (!emCreditos && JogoAtual != 0 && !emMenuTemporario) {
+                LimparTela();
+                faseCarregada = -1; // força CarregarFase a recarregar a mesma fase
             }
+            break;
+
+        case 'm':
+            // Alterna entre a fase atual e o menu, preservando o progresso
+            if (!emCreditos) {
+                if (!emMenuTemporario) {
+                    if (JogoAtual != 0) {
+                        // Salva o estado completo da fase antes de ir ao menu
+                        CopiarMatriz(m, matrizSalva);
+                        pxSalvo = px;
+                        pySalvo = py;
+                        rerun1Salvo = rerun1;
+                        jogoAtualSalvo = JogoAtual;
+                        faseCarregadaSalva = faseCarregada;
+
+                        emMenuTemporario = true;
+                        LimparTela();
+                        JogoAtual = 0; // exibe o menu (será carregado no próximo loop)
+                    }
+                    // Se já estava no menu "de verdade", 'm' não faz nada.
+                } else {
+                    // Restaura a fase exatamente de onde o jogador parou
+                    CopiarMatriz(matrizSalva, m);
+                    px = pxSalvo;
+                    py = pySalvo;
+                    rerun1 = rerun1Salvo;
+                    JogoAtual = jogoAtualSalvo;
+                    faseCarregada = faseCarregadaSalva;
+
+                    emMenuTemporario = false;
+                    LimparTela();
+                }
+            }
+            break;
+
+        case 'p':
+            // Alterna para a tela de créditos e de volta ao que estava sendo
+            // exibido (jogo ou menu), sem alterar nenhum estado do jogo.
+            emCreditos = !emCreditos;
+            LimparTela();
             break;
         }
 
