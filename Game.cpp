@@ -147,9 +147,6 @@ void menu(int (&mat)[20][20]) {
             mat[i][j] = temp[i][j];
 }
 
-void CarregarFase(int (&mat)[20][20], int jogoAtual, int &px, int &py, int &rerun1);
-void EncontrarJogador(int (&mat)[20][20], int &px, int &py);
-
 void GirarMatrizE(int (&mat)[20][20]) {
     for (int i = 0; i < 20; i++) {
         for (int j = i + 1; j < 20; j++) {
@@ -293,7 +290,7 @@ void CopiarMatriz(int (&origem)[20][20], int (&destino)[20][20]) {
     memcpy(destino, origem, sizeof(int) * 20 * 20);
 }
 
-void DesenharMapa(int (&mat)[20][20]) {
+void DesenharMapa(int contador, int (&mat)[20][20]) {
     printf("\033[37m");
 
     for (int i = 0; i < 20; i++) {
@@ -323,8 +320,10 @@ void DesenharMapa(int (&mat)[20][20]) {
     printf("\033[37m");
 
     printf("\033[36m");
-    cout << "[p] creditos  [r] reiniciar fase  [m] menu" << endl;
+    cout << "[p] creditos  [r] reiniciar fase  [m] menu" << endl <<endl;
     printf("\033[37m");
+
+    cout<<contador<<endl;
 }
 
 void DesenharCreditos() {
@@ -340,6 +339,7 @@ void DesenharCreditos() {
 }
 
 int main() {
+    int contador=0;
     int m[20][20];
     int JogoAtual = 0;
     int faseCarregada = -1;
@@ -365,7 +365,7 @@ int main() {
                 faseCarregada = JogoAtual;
             }
 
-            DesenharMapa(m);
+            DesenharMapa(contador, m);
         }
 
         char tecla = getch();
@@ -383,6 +383,7 @@ int main() {
         case 'e':
             if (!emCreditos && rerun1 == 3) {
                 GirarMapa(m, px, py, giro, tecla);
+                contador++
             }
             break;
 
